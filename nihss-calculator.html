@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIHSS — Escala de Ictus del NIH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F5F0;
+  --surface:#FFFFFF;
+  --surface2:#F0EDE6;
+  --border:#E0DBD1;
+  --border-strong:#C8C2B4;
+  --text:#1C1A16;
+  --text-mid:#5C5850;
+  --text-soft:#9A9488;
+  --accent:#C1121F;
+  --accent-light:#FCEAE9;
+  --accent-border:#E8B4B3;
+  --blue:#0F4C81;
+  --blue-light:#E8F0FA;
+  --blue-border:#A8C4E0;
+  --green:#1A6640;
+  --green-light:#E8F5EE;
+  --green-border:#A3D4B8;
+  --amber:#7A4F0C;
+  --amber-light:#FDF3E3;
+  --amber-border:#E0C48A;
+  --teal:#0D6B5E;
+  --teal-light:#E0F5F0;
+  --teal-border:#8ACFC4;
+  --r:10px;--r-sm:6px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── Layout ── */
+.app-shell{display:flex;min-height:100vh}
+.sidebar{
+  width:300px;flex-shrink:0;
+  background:var(--text);
+  padding:28px 24px;
+  position:sticky;top:0;height:100vh;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:0;
+}
+.main{flex:1;padding:32px 40px 80px;max-width:860px}
+
+/* ── Sidebar ── */
+.brand{margin-bottom:28px}
+.brand-tag{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:.12em;
+  color:#9A9488;text-transform:uppercase;margin-bottom:6px;
+}
+.brand-title{
+  font-family:'Fraunces',serif;font-size:22px;font-weight:600;
+  color:#FFFFFF;line-height:1.15;
+}
+.brand-sub{font-size:12px;color:#9A9488;margin-top:4px}
+
+.score-display{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r);
+  padding:20px;margin-bottom:24px;
+  text-align:center;
+}
+.score-num{
+  font-family:'DM Mono',monospace;
+  font-size:56px;font-weight:500;
+  line-height:1;transition:color .3s;
+}
+.score-num.s0{color:#52B788}
+.score-num.s1{color:#74C69D}
+.score-num.s2{color:#E9C46A}
+.score-num.s3{color:#F4A261}
+.score-num.s4{color:#E76F51}
+.score-num.s5{color:#C1121F}
+.score-label{font-size:11px;color:#9A9488;margin-top:4px;letter-spacing:.06em;text-transform:uppercase}
+.severity-badge{
+  display:inline-block;margin-top:10px;
+  padding:4px 14px;border-radius:99px;
+  font-size:11px;font-weight:500;
+  transition:all .3s;
+}
+
+.progress-section{margin-bottom:24px}
+.progress-label{font-size:11px;color:#9A9488;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.progress-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:#E9C46A;border-radius:2px;transition:width .4s ease}
+.progress-text{font-size:11px;color:#9A9488;margin-top:5px;font-family:'DM Mono',monospace}
+
+.nav-list{flex:1;display:flex;flex-direction:column;gap:2px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:var(--r-sm);
+  cursor:pointer;transition:background .15s;
+  text-decoration:none;
+}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:rgba(255,255,255,.1)}
+.nav-dot{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:9px;color:#9A9488;
+  transition:all .2s;
+}
+.nav-dot.done{background:rgba(82,183,136,.2);border-color:#52B788;color:#52B788}
+.nav-dot.abnormal{background:rgba(193,18,31,.2);border-color:#C1121F;color:#C1121F}
+.nav-text{font-size:12px;color:#9A9488;flex:1}
+.nav-score{font-family:'DM Mono',monospace;font-size:11px;color:#9A9488}
+
+.sidebar-actions{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:8px}
+.btn-reset-s{
+  padding:10px;border-radius:var(--r-sm);
+  border:1px solid rgba(255,255,255,.15);
+  background:transparent;color:#9A9488;
+  font-family:'DM Sans',sans-serif;font-size:12px;
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-reset-s:hover{background:rgba(255,255,255,.06);color:#FFFFFF}
+.btn-print-s{
+  padding:10px;border-radius:var(--r-sm);
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);color:#FFFFFF;
+  font-family:'DM Sans',sans-serif;font-size:12px;
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-print-s:hover{background:rgba(255,255,255,.15)}
+
+/* ── Main content ── */
+.page-header{margin-bottom:40px}
+.page-tag{
+  font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-soft);margin-bottom:8px;
+}
+.page-title{
+  font-family:'Fraunces',serif;font-size:36px;font-weight:300;
+  letter-spacing:-.02em;line-height:1.1;margin-bottom:6px;
+}
+.page-title em{font-style:italic;font-weight:300}
+.page-desc{font-size:14px;color:var(--text-mid);line-height:1.6;max-width:560px}
+
+/* ── Item cards ── */
+.items-grid{display:flex;flex-direction:column;gap:16px}
+.item-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.item-card:hover{border-color:var(--border-strong)}
+.item-card.has-value{border-color:var(--accent-border)}
+
+.item-top{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:18px 20px 14px;
+}
+.item-index{
+  font-family:'DM Mono',monospace;font-size:11px;
+  color:var(--text-soft);min-width:28px;margin-top:2px;
+}
+.item-info{flex:1}
+.item-name{font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;line-height:1.2}
+.item-task{
+  font-size:12px;color:var(--text-mid);line-height:1.4;
+  background:var(--surface2);border-radius:var(--r-sm);
+  padding:6px 10px;margin-top:6px;
+  border-left:2px solid var(--border-strong);
+}
+.item-task strong{color:var(--text);font-weight:500}
+.item-score-badge{
+  font-family:'DM Mono',monospace;font-size:14px;font-weight:500;
+  min-width:32px;text-align:right;
+  color:var(--text-soft);transition:color .2s;
+}
+.item-card.has-value .item-score-badge{color:var(--accent)}
+
+/* Options */
+.item-options{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border-top:1px solid var(--border)}
+.opt-btn{
+  background:var(--surface);flex:1;min-width:160px;
+  border:none;padding:12px 14px;
+  text-align:left;cursor:pointer;
+  transition:background .15s;
+  font-family:'DM Sans',sans-serif;
+  position:relative;
+}
+.opt-btn:hover{background:var(--surface2)}
+.opt-btn.selected{background:var(--accent-light)}
+.opt-btn.selected::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--accent);
+}
+.opt-score{
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:500;
+  color:var(--text-soft);margin-bottom:3px;
+  display:flex;align-items:center;gap:4px;
+}
+.opt-btn.selected .opt-score{color:var(--accent)}
+.opt-dot{width:6px;height:6px;border-radius:50%;background:var(--border-strong);flex-shrink:0}
+.opt-btn.selected .opt-dot{background:var(--accent)}
+.opt-label{font-size:12px;font-weight:500;color:var(--text);line-height:1.2}
+.opt-desc{font-size:11px;color:var(--text-soft);margin-top:2px;line-height:1.3}
+
+/* Result section */
+.result-section{
+  margin-top:32px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.result-hero{
+  display:flex;align-items:center;gap:20px;
+  padding:24px;
+  border-bottom:1px solid var(--border);
+}
+.result-score-big{
+  font-family:'DM Mono',monospace;
+  font-size:64px;font-weight:500;line-height:1;
+  transition:color .4s;
+  min-width:80px;
+}
+.result-score-big.s0{color:#1A6640}
+.result-score-big.s1{color:#52B788}
+.result-score-big.s2{color:#E9C46A}
+.result-score-big.s3{color:#F4A261}
+.result-score-big.s4{color:#E76F51}
+.result-score-big.s5{color:#C1121F}
+.result-divider{width:1px;height:60px;background:var(--border);flex-shrink:0}
+.result-verdict{
+  font-family:'Fraunces',serif;font-size:20px;font-weight:500;
+  margin-bottom:5px;transition:color .3s;
+}
+.result-detail{font-size:13px;color:var(--text-mid);line-height:1.5;max-width:480px}
+
+.result-body{padding:20px 24px}
+.result-stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;margin-bottom:20px;
+}
+.stat-card{
+  background:var(--surface2);border-radius:var(--r-sm);
+  padding:12px;
+}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-soft);margin-bottom:4px;font-weight:500}
+.stat-value{font-size:18px;font-weight:500;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text-soft);margin-top:2px}
+
+.actions-strip{display:flex;flex-wrap:wrap;gap:8px}
+.action-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 12px;border-radius:99px;
+  font-size:12px;font-weight:500;border:1px solid;
+}
+.action-pill.urgent{background:var(--accent-light);border-color:var(--accent-border);color:var(--accent)}
+.action-pill.info{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue)}
+.action-pill.ok{background:var(--green-light);border-color:var(--green-border);color:var(--green)}
+.action-pill.warn{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber)}
+
+/* Footer */
+.meta-footer{
+  margin-top:40px;padding-top:24px;
+  border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+}
+.meta-block{}
+.meta-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-soft);margin-bottom:5px;font-weight:500}
+.meta-text{font-size:12px;color:var(--text-mid);line-height:1.6}
+.meta-text a{color:var(--blue);text-decoration:none}
+.meta-text a:hover{text-decoration:underline}
+
+/* Mobile */
+@media(max-width:768px){
+  .app-shell{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:relative;padding:20px}
+  .nav-list{display:none}
+  .main{padding:20px 16px 60px}
+  .page-title{font-size:26px}
+  .opt-btn{min-width:120px}
+  .result-score-big{font-size:48px}
+}
+@media print{
+  .sidebar{display:none}
+  .main{padding:16px}
+  .opt-btn,.btn-reset-s,.btn-print-s,.sidebar-actions{display:none}
+  .item-card{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-tag">Escala neurológica</div>
+      <div class="brand-title">NIHSS</div>
+      <div class="brand-sub">National Institutes of Health Stroke Scale</div>
+    </div>
+
+    <div class="score-display">
+      <div class="score-num s0" id="sideScore">0</div>
+      <div class="score-label">Puntuación total</div>
+      <div class="severity-badge" id="sideBadge" style="background:rgba(82,183,136,.15);color:#52B788;border:1px solid rgba(82,183,136,.3)">Sin déficit</div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-label">Progreso</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-text" id="progressText">0 / 11 ítems</div>
+    </div>
+
+    <nav class="nav-list" id="navList"></nav>
+
+    <div class="sidebar-actions">
+      <button class="btn-reset-s" onclick="resetAll()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.75"/></svg>
+        Nueva evaluación
+      </button>
+      <button class="btn-print-s" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir / PDF
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <div class="page-tag">Evaluación neurológica · ACV agudo</div>
+      <h1 class="page-title">Escala <em>NIHSS</em></h1>
+      <p class="page-desc">Herramienta validada para cuantificar la severidad del déficit neurológico en el ACV agudo. Evalúa 11 dominios. Guía AHA/ASA 2026: aplicar en &lt;10 min del ingreso.</p>
+    </div>
+
+    <div class="items-grid" id="itemsGrid"></div>
+
+    <div class="result-section" id="resultSection">
+      <div class="result-hero">
+        <div class="result-score-big s0" id="resultScore">0</div>
+        <div class="result-divider"></div>
+        <div>
+          <div class="result-verdict" id="resultVerdict">Sin déficit neurológico</div>
+          <div class="result-detail" id="resultDetail">Complete los ítems para obtener la interpretación clínica.</div>
+        </div>
+      </div>
+      <div class="result-body">
+        <div class="result-stats">
+          <div class="stat-card">
+            <div class="stat-label">Puntuación</div>
+            <div class="stat-value" id="statScore">0 / 42</div>
+            <div class="stat-sub">Máximo posible: 42</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ítems completados</div>
+            <div class="stat-value" id="statItems">0 / 11</div>
+            <div class="stat-sub">Ítems evaluados</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ítems anormales</div>
+            <div class="stat-value" id="statAbnormal">—</div>
+            <div class="stat-sub">Puntaje &gt; 0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Candidato reperfusión</div>
+            <div class="stat-value" id="statReperfusion">—</div>
+            <div class="stat-sub">Orientación clínica</div>
+          </div>
+        </div>
+        <div class="actions-strip" id="actionsStrip">
+          <span class="action-pill info">Complete todos los ítems para ver recomendaciones</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-footer">
+      <div class="meta-block">
+        <div class="meta-label">Referencia principal</div>
+        <div class="meta-text">Brott T, et al. <em>Measurements of acute cerebral infarction: a clinical examination scale.</em> Stroke. 1989;20(7):864–870.</div>
+      </div>
+      <div class="meta-block">
+        <div class="meta-label">Guía vigente</div>
+        <div class="meta-text">Prabhakaran S, et al. <a href="https://www.ahajournals.org/doi/10.1161/STR.0000000000000513" target="_blank">2026 AHA/ASA Guideline for Early Management of AIS</a>. Stroke. Jan 2026. doi:10.1161/STR.0000000000000513</div>
+      </div>
+      <div class="meta-block">
+        <div class="meta-label">Nota clínica</div>
+        <div class="meta-text">Herramienta de apoyo clínico. No reemplaza el juicio médico. NIHSS debe completarse en &lt;10 min. Documentar hora de evaluación.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const ITEMS = [
+  {
+    id:"1a", index:"1a", name:"Nivel de conciencia",
+    task:"Observar nivel de alerta general",
+    instruction:"Observar directamente. No estimular si no es necesario.",
+    options:[
+      {score:0, label:"Alerta", desc:"Responde con viveza"},
+      {score:1, label:"Somnoliento", desc:"Se despierta con estímulo leve"},
+      {score:2, label:"Estuporoso", desc:"Requiere estimulación repetida o intensa"},
+      {score:3, label:"Comatoso", desc:"Solo respuestas reflejas o ninguna"},
+    ]
+  },
+  {
+    id:"1b", index:"1b", name:"Preguntas de orientación",
+    task:"¿Qué mes es? / ¿Cuántos años tiene?",
+    instruction:"Preguntar: '¿En qué mes estamos?' y '¿Cuántos años tiene?'. No dar pistas.",
+    options:[
+      {score:0, label:"Ambas correctas", desc:"Responde correctamente las 2"},
+      {score:1, label:"Una correcta", desc:"Solo responde correctamente una"},
+      {score:2, label:"Ninguna correcta", desc:"No responde o ambas incorrectas"},
+    ]
+  },
+  {
+    id:"1c", index:"1c", name:"Órdenes motoras",
+    task:"Abrir/cerrar ojos · Abrir/cerrar mano no parética",
+    instruction:"Dar dos órdenes: 'Abra y cierre los ojos' y 'Abra y cierre la mano'. Se puede gesticular.",
+    options:[
+      {score:0, label:"Ambas correctas", desc:"Realiza las 2 órdenes"},
+      {score:1, label:"Una correcta", desc:"Solo realiza una orden"},
+      {score:2, label:"Ninguna correcta", desc:"No realiza ninguna orden"},
+    ]
+  },
+  {
+    id:"2", index:"2", name:"Mirada conjugada",
+    task:"Seguimiento ocular horizontal",
+    instruction:"Mover dedo horizontalmente frente al paciente o pedir que siga un objeto. Solo evaluar movimientos horizontales.",
+    options:[
+      {score:0, label:"Normal", desc:"Movimientos conjugados normales"},
+      {score:1, label:"Paresia parcial", desc:"Paresia de la mirada — corrige con maniobra oculocefálica"},
+      {score:2, label:"Desviación forzada", desc:"Desviación forzada o paresia total no vencida"},
+    ]
+  },
+  {
+    id:"3", index:"3", name:"Campos visuales",
+    task:"Confrontación visual bilateral",
+    instruction:"Pedir al paciente que mire al frente. Mover dedos en los cuatro cuadrantes visuales y pedir que indique cuándo los ve.",
+    options:[
+      {score:0, label:"Sin pérdida", desc:"Campos visuales normales"},
+      {score:1, label:"Hemianopsia parcial", desc:"Cuadrantanopsia o asimetría leve"},
+      {score:2, label:"Hemianopsia completa", desc:"Hemianopsia homónima completa"},
+      {score:3, label:"Ceguera bilateral", desc:"Ceguera bilateral incluyendo cortical"},
+    ]
+  },
+  {
+    id:"4", index:"4", name:"Paresia facial",
+    task:"Pedir que sonría y cierre los ojos",
+    instruction:"Pedir: 'Muéstreme los dientes' y 'Cierre los ojos fuerte'. Si no coopera: frotar el esternón y observar la mueca.",
+    options:[
+      {score:0, label:"Normal", desc:"Movimiento facial simétrico"},
+      {score:1, label:"Paresia menor", desc:"Asimetría leve, borramiento del surco nasolabial"},
+      {score:2, label:"Paresia parcial", desc:"Parálisis total o casi total del tercio inferior"},
+      {score:3, label:"Parálisis completa", desc:"Parálisis completa uni o bilateral"},
+    ]
+  },
+  {
+    id:"5", index:"5", name:"Motor brazo izquierdo",
+    task:"Mantener brazo a 90° (sentado) o 45° (acostado) × 10 s",
+    instruction:"Extender el brazo en posición indicada con palma hacia abajo. Contar 10 segundos.",
+    options:[
+      {score:0, label:"Sin caída", desc:"Mantiene posición ≥10 s"},
+      {score:1, label:"Caída parcial", desc:"Cae antes de 10 s, no toca la cama"},
+      {score:2, label:"Esfuerzo contra gravedad", desc:"No puede mantener, pero hay esfuerzo"},
+      {score:3, label:"Sin esfuerzo", desc:"Cae inmediatamente, sin movimiento útil"},
+      {score:4, label:"Sin movimiento", desc:"Parálisis completa"},
+    ]
+  },
+  {
+    id:"6", index:"6", name:"Motor brazo derecho",
+    task:"Mantener brazo a 90° (sentado) o 45° (acostado) × 10 s",
+    instruction:"Igual que brazo izquierdo. Evaluar independientemente.",
+    options:[
+      {score:0, label:"Sin caída", desc:"Mantiene posición ≥10 s"},
+      {score:1, label:"Caída parcial", desc:"Cae antes de 10 s, no toca la cama"},
+      {score:2, label:"Esfuerzo contra gravedad", desc:"No puede mantener, pero hay esfuerzo"},
+      {score:3, label:"Sin esfuerzo", desc:"Cae inmediatamente, sin movimiento útil"},
+      {score:4, label:"Sin movimiento", desc:"Parálisis completa"},
+    ]
+  },
+  {
+    id:"7", index:"7", name:"Motor pierna izquierda",
+    task:"Mantener pierna a 30° en decúbito × 5 s",
+    instruction:"Paciente en decúbito supino. Elevar pierna a 30° y mantener 5 segundos.",
+    options:[
+      {score:0, label:"Sin caída", desc:"Mantiene posición ≥5 s"},
+      {score:1, label:"Caída parcial", desc:"Cae antes de 5 s, no toca la cama"},
+      {score:2, label:"Esfuerzo contra gravedad", desc:"No puede mantener, pero hay esfuerzo"},
+      {score:3, label:"Sin esfuerzo", desc:"Cae inmediatamente, sin movimiento útil"},
+      {score:4, label:"Sin movimiento", desc:"Parálisis completa"},
+    ]
+  },
+  {
+    id:"8", index:"8", name:"Motor pierna derecha",
+    task:"Mantener pierna a 30° en decúbito × 5 s",
+    instruction:"Igual que pierna izquierda. Evaluar independientemente.",
+    options:[
+      {score:0, label:"Sin caída", desc:"Mantiene posición ≥5 s"},
+      {score:1, label:"Caída parcial", desc:"Cae antes de 5 s, no toca la cama"},
+      {score:2, label:"Esfuerzo contra gravedad", desc:"No puede mantener, pero hay esfuerzo"},
+      {score:3, label:"Sin esfuerzo", desc:"Cae inmediatamente, sin movimiento útil"},
+      {score:4, label:"Sin movimiento", desc:"Parálisis completa"},
+    ]
+  },
+  {
+    id:"9", index:"9", name:"Ataxia de extremidades",
+    task:"Prueba índice-nariz y talón-rodilla",
+    instruction:"Prueba índice-nariz-índice y talón-rodilla-espinilla. Solo puntuar si claramente mayor que la paresia.",
+    options:[
+      {score:0, label:"Ausente", desc:"Sin ataxia o no evaluable por paresia"},
+      {score:1, label:"En una extremidad", desc:"Ataxia en un miembro"},
+      {score:2, label:"En dos extremidades", desc:"Ataxia en dos miembros"},
+    ]
+  },
+  {
+    id:"10", index:"10", name:"Sensibilidad",
+    task:"Pinchazo en cara, brazo, tronco y pierna",
+    instruction:"Utilizar un objeto punzante. Comparar ambos lados. Si hay alteración de conciencia, puntuar 1.",
+    options:[
+      {score:0, label:"Normal", desc:"Sin pérdida de sensibilidad"},
+      {score:1, label:"Leve-moderada", desc:"Pérdida leve a moderada — menos agudo o sordo"},
+      {score:2, label:"Severa-total", desc:"Pérdida severa o total — no percibe el tacto"},
+    ]
+  },
+  {
+    id:"11", index:"11", name:"Lenguaje",
+    task:"Nombrar objetos · leer oraciones · describir lámina",
+    instruction:"Pedir: nombrar objetos comunes, leer lista de oraciones cortas y describir una escena estándar.",
+    options:[
+      {score:0, label:"Normal", desc:"Sin afasia"},
+      {score:1, label:"Afasia leve-moderada", desc:"Pérdida de fluidez o comprensión sin comunicación imposible"},
+      {score:2, label:"Afasia severa", desc:"Comunicación fragmentaria — gran carga para el examinador"},
+      {score:3, label:"Mutismo/afasia global", desc:"Sin habla ni comprensión útil"},
+    ]
+  },
+  {
+    id:"12", index:"12", name:"Disartria",
+    task:"Repetir palabras: 'mamá', 'lápiz', 'béisbol'",
+    instruction:"Pedir que repita las palabras listadas. Si tiene intubación u otra barrera, puntuar 9 (no evaluable).",
+    options:[
+      {score:0, label:"Normal", desc:"Articulación normal"},
+      {score:1, label:"Leve-moderada", desc:"Arrastrada pero inteligible"},
+      {score:2, label:"Severa/anartria", desc:"Ininteligible o sin habla"},
+    ]
+  },
+  {
+    id:"13", index:"13", name:"Extinción e inatención",
+    task:"Estimulación simultánea bilateral",
+    instruction:"Estimular simultáneamente ambos lados (táctil y visual). Evaluar extinción o negligencia.",
+    options:[
+      {score:0, label:"Normal", desc:"Sin anormalidad"},
+      {score:1, label:"Extinción parcial", desc:"Extinción a estimulación doble en una modalidad"},
+      {score:2, label:"Hemi-inatención severa", desc:"No reconoce su propio lado — extinción en más de una modalidad"},
+    ]
+  },
+];
+
+const state = {};
+ITEMS.forEach(item => { state[item.id] = null; });
+
+function getSeverity(score){
+  if(score===0) return {label:"Sin déficit",cls:"s0",color:"#52B788",bg:"rgba(82,183,136,.15)",border:"rgba(82,183,136,.3)"};
+  if(score<=4)  return {label:"Leve",cls:"s1",color:"#74C69D",bg:"rgba(116,198,157,.15)",border:"rgba(116,198,157,.3)"};
+  if(score<=15) return {label:"Moderado",cls:"s2",color:"#E9C46A",bg:"rgba(233,196,106,.15)",border:"rgba(233,196,106,.3)"};
+  if(score<=20) return {label:"Grave",cls:"s3",color:"#F4A261",bg:"rgba(244,162,97,.15)",border:"rgba(244,162,97,.3)"};
+  if(score<=25) return {label:"Muy grave",cls:"s4",color:"#E76F51",bg:"rgba(231,111,81,.15)",border:"rgba(231,111,81,.3)"};
+  return {label:"Crítico",cls:"s5",color:"#C1121F",bg:"rgba(193,18,31,.15)",border:"rgba(193,18,31,.3)"};
+}
+
+function getTotalScore(){
+  return Object.values(state).reduce((sum,v)=> sum+(v||0),0);
+}
+function getCompleted(){
+  return Object.values(state).filter(v=>v!==null).length;
+}
+function getAbnormal(){
+  return Object.values(state).filter(v=>v!==null&&v>0).length;
+}
+
+function buildNav(){
+  const nav = document.getElementById('navList');
+  nav.innerHTML = ITEMS.map(item=>`
+    <a class="nav-item" id="nav-${item.id}" href="#card-${item.id}">
+      <div class="nav-dot" id="ndot-${item.id}">${item.index}</div>
+      <span class="nav-text">${item.name}</span>
+      <span class="nav-score" id="nscore-${item.id}">—</span>
+    </a>
+  `).join('');
+}
+
+function buildItems(){
+  const grid = document.getElementById('itemsGrid');
+  grid.innerHTML = ITEMS.map(item=>`
+    <div class="item-card" id="card-${item.id}">
+      <div class="item-top">
+        <div class="item-index">${item.index}</div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-task"><strong>Tarea:</strong> ${item.task}</div>
+          <div class="item-task" style="margin-top:4px;border-left-color:#A3D4B8"><strong>Técnica:</strong> ${item.instruction}</div>
+        </div>
+        <div class="item-score-badge" id="badge-${item.id}">—</div>
+      </div>
+      <div class="item-options">
+        ${item.options.map((opt,j)=>`
+          <button class="opt-btn" id="opt-${item.id}-${j}" onclick="selectOption('${item.id}',${opt.score},${j})">
+            <div class="opt-score"><span class="opt-dot"></span>${opt.score} pt${opt.score!==1?'s':''}</div>
+            <div class="opt-label">${opt.label}</div>
+            <div class="opt-desc">${opt.desc}</div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectOption(itemId, score, optIdx){
+  state[itemId] = score;
+  const item = ITEMS.find(i=>i.id===itemId);
+  item.options.forEach((_,j)=>{
+    document.getElementById(`opt-${itemId}-${j}`).classList.remove('selected');
+  });
+  document.getElementById(`opt-${itemId}-${optIdx}`).classList.add('selected');
+  const card = document.getElementById(`card-${itemId}`);
+  card.classList.toggle('has-value', score!==null);
+  document.getElementById(`badge-${itemId}`).textContent = score;
+  const dot = document.getElementById(`ndot-${itemId}`);
+  dot.classList.add('done');
+  dot.classList.toggle('abnormal', score>0);
+  if(score>0) dot.classList.remove('done');
+  else dot.classList.add('done');
+  document.getElementById(`nscore-${itemId}`).textContent = score;
+  updateResult();
+}
+
+function updateResult(){
+  const total = getTotalScore();
+  const completed = getCompleted();
+  const abnormal = getAbnormal();
+  const sev = getSeverity(total);
+
+  // Sidebar
+  const sideScore = document.getElementById('sideScore');
+  sideScore.textContent = total;
+  sideScore.className = 'score-num '+sev.cls;
+  const badge = document.getElementById('sideBadge');
+  badge.textContent = sev.label;
+  badge.style.background = sev.bg;
+  badge.style.color = sev.color;
+  badge.style.border = `1px solid ${sev.border}`;
+
+  // Progress
+  const pct = Math.round((completed/ITEMS.length)*100);
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressText').textContent = `${completed} / ${ITEMS.length} ítems`;
+
+  // Result hero
+  const rscore = document.getElementById('resultScore');
+  rscore.textContent = total;
+  rscore.className = 'result-score-big '+sev.cls;
+  document.getElementById('resultVerdict').textContent = getVerdict(total,completed);
+  document.getElementById('resultVerdict').style.color = total>0&&completed===ITEMS.length ? sev.color : '';
+  document.getElementById('resultDetail').textContent = getDetail(total,completed);
+
+  // Stats
+  document.getElementById('statScore').textContent = `${total} / 42`;
+  document.getElementById('statItems').textContent = `${completed} / ${ITEMS.length}`;
+  document.getElementById('statAbnormal').textContent = completed>0 ? `${abnormal} ítems` : '—';
+  document.getElementById('statReperfusion').textContent = completed===ITEMS.length ? getReperfusion(total) : '—';
+
+  // Actions
+  if(completed===ITEMS.length) renderActions(total);
+}
+
+function getVerdict(total, completed){
+  if(completed<ITEMS.length) return completed===0 ? 'Evaluación pendiente' : `${ITEMS.length-completed} ítem${ITEMS.length-completed>1?'s':''} pendiente${ITEMS.length-completed>1?'s':''}`;
+  if(total===0) return 'Sin déficit neurológico';
+  if(total<=4)  return 'Déficit neurológico leve';
+  if(total<=15) return 'Déficit neurológico moderado';
+  if(total<=20) return 'Déficit neurológico grave';
+  if(total<=25) return 'Déficit neurológico muy grave';
+  return 'Déficit neurológico crítico';
+}
+
+function getDetail(total, completed){
+  if(completed<ITEMS.length) return 'Complete los '+ITEMS.length+' ítems para obtener la interpretación clínica y las recomendaciones terapéuticas.';
+  if(total===0) return 'NIHSS 0: exploración neurológica sin déficit detectable. Evaluar AIT como diagnóstico diferencial. Observación y estudio de causa.';
+  if(total<=4)  return 'NIHSS 1–4: déficit leve. Candidato a trombólisis si el déficit es funcionalmente discapacitante (guía 2026). Evaluar OGV con angiotomografía.';
+  if(total<=15) return 'NIHSS 5–15: déficit moderado. Candidato a trombólisis IV y/o trombectomía mecánica según tiempo y neuroimagen. Activar código ictus.';
+  if(total<=20) return 'NIHSS 16–20: déficit grave. Candidato prioritario a trombectomía mecánica. Evaluar OGV urgente. Trombólisis puente si ≤4.5 h.';
+  return 'NIHSS >20: déficit muy grave o crítico. Candidato a trombectomía urgente. UCI/UCIN. Evaluar pronóstico y discutir con familia. No imponer DNR en primeras 24 h.';
+}
+
+function getReperfusion(total){
+  if(total===0) return 'Evaluar AIT';
+  if(total<=4)  return 'Si discapacitante: sí';
+  if(total<=20) return 'Candidato IVT + EVT';
+  return 'EVT prioritaria';
+}
+
+function renderActions(total){
+  const strip = document.getElementById('actionsStrip');
+  let html = '';
+  if(total===0){
+    html = `<span class="action-pill ok">Sin indicación de reperfusión urgente</span>
+            <span class="action-pill info">Descartar AIT — evaluar causa</span>
+            <span class="action-pill info">TC sin contraste obligatoria</span>`;
+  } else if(total<=4){
+    html = `<span class="action-pill warn">Déficit discapacitante: trombólisis IV</span>
+            <span class="action-pill info">Angiotomografía para OGV</span>
+            <span class="action-pill info">TC sin contraste urgente</span>`;
+  } else if(total<=15){
+    html = `<span class="action-pill urgent">Candidato trombólisis IV (≤4.5 h)</span>
+            <span class="action-pill urgent">Candidato EVT si OGV confirmada</span>
+            <span class="action-pill info">TC + TCA urgente</span>
+            <span class="action-pill info">Activar código ictus</span>`;
+  } else if(total<=20){
+    html = `<span class="action-pill urgent">Candidato EVT prioritario</span>
+            <span class="action-pill urgent">Trombólisis puente si ≤4.5 h</span>
+            <span class="action-pill info">TC + TCA + perfusión</span>
+            <span class="action-pill info">Centro EVT / bypass</span>`;
+  } else {
+    html = `<span class="action-pill urgent">Trombectomía mecánica urgente</span>
+            <span class="action-pill urgent">UCI / UCIN</span>
+            <span class="action-pill info">TC multimodal urgente</span>
+            <span class="action-pill warn">No DNR en primeras 24 h</span>`;
+  }
+  strip.innerHTML = html;
+}
+
+function resetAll(){
+  ITEMS.forEach(item=>{
+    state[item.id] = null;
+    item.options.forEach((_,j)=>{
+      const btn = document.getElementById(`opt-${item.id}-${j}`);
+      if(btn) btn.classList.remove('selected');
+    });
+    const card = document.getElementById(`card-${item.id}`);
+    if(card) card.classList.remove('has-value');
+    const badge = document.getElementById(`badge-${item.id}`);
+    if(badge) badge.textContent = '—';
+    const dot = document.getElementById(`ndot-${item.id}`);
+    if(dot){ dot.classList.remove('done','abnormal'); }
+    const nscore = document.getElementById(`nscore-${item.id}`);
+    if(nscore) nscore.textContent = '—';
+  });
+  const sideScore = document.getElementById('sideScore');
+  sideScore.textContent = '0'; sideScore.className = 'score-num s0';
+  const badge = document.getElementById('sideBadge');
+  badge.textContent = 'Sin déficit';
+  badge.style.background = 'rgba(82,183,136,.15)';
+  badge.style.color = '#52B788';
+  badge.style.border = '1px solid rgba(82,183,136,.3)';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressText').textContent = `0 / ${ITEMS.length} ítems`;
+  document.getElementById('resultScore').textContent = '0';
+  document.getElementById('resultScore').className = 'result-score-big s0';
+  document.getElementById('resultVerdict').textContent = 'Sin déficit neurológico';
+  document.getElementById('resultVerdict').style.color = '';
+  document.getElementById('resultDetail').textContent = 'Complete los ítems para obtener la interpretación clínica.';
+  document.getElementById('statScore').textContent = '0 / 42';
+  document.getElementById('statItems').textContent = `0 / ${ITEMS.length}`;
+  document.getElementById('statAbnormal').textContent = '—';
+  document.getElementById('statReperfusion').textContent = '—';
+  document.getElementById('actionsStrip').innerHTML = '<span class="action-pill info">Complete todos los ítems para ver recomendaciones</span>';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+buildNav();
+buildItems();
+</script>
+</body>
+</html>
